@@ -6,9 +6,6 @@
 
 int main(int, char**)
 {
-    // Setup SDL
-    // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,
-    // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
     {
         printf("Error: %s\n", SDL_GetError());
@@ -26,9 +23,6 @@ int main(int, char**)
         SDL_Log("Error creating SDL_Renderer!");
         return false;
     }
-    //SDL_RendererInfo info;
-    //SDL_GetRendererInfo(renderer, &info);
-    //SDL_Log("Current SDL_Renderer: %s", info.name);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -38,24 +32,15 @@ int main(int, char**)
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer_Init(renderer);
 
     // Our state
-    bool show_demo_window = true;
-    bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-    SDL_Texture* renderTarget = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 200, 200);
-    SDL_SetRenderTarget(renderer, renderTarget);
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00);
-    SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 0x00, 0xFF, 0xFF, 0xFF);
-    SDL_RenderDrawLine(renderer, 0, 0, 200, 200);
-    SDL_SetRenderTarget(renderer, nullptr);
+    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
+    ImVec4 grid_color = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
+    int grid_size = 10;
 
     // Main loop
     bool done = false;
@@ -81,47 +66,39 @@ int main(int, char**)
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
             static float f = 0.0f;
             static int counter = 0;
 
             ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-            ImGui::Image(renderTarget, { 200, 200 });
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
+            ImGui::ColorEdit3("grid color", (float*)&grid_color); // Edit 3 floats representing a color
+            ImGui::SliderInt("grid size", &grid_size, 0, 100);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
 
-        // 3. Show another simple window.
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }
 
         // Rendering
         ImGui::Render();
         SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
         SDL_RenderClear(renderer);
+
+        SDL_SetRenderDrawColor(renderer, (Uint8)(grid_color.x * 255), (Uint8)(grid_color.y * 255), (Uint8)(grid_color.z * 255), (Uint8)(grid_color.w * 255));
+        int width, height;
+        SDL_GetWindowSize(window, &width, &height);
+        for (int x = 0; x < width; x += grid_size)
+        {
+            SDL_RenderDrawLine(renderer, x, 0, x, height);
+        }
+
+        for (int y = 0; y < height; y += grid_size)
+        {
+            SDL_RenderDrawLine(renderer, 0, y, width, y);
+        }
+
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
         SDL_RenderPresent(renderer);
     }
