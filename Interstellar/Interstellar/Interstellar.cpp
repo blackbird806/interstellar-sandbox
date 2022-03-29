@@ -5,6 +5,12 @@
 #include <imgui/imgui_impl_sdlrenderer.h>
 #include <stdio.h>
 #include <vector>
+#include <fstream>
+#include <sstream>
+#define AINI_IMPLEMENTATION
+#include "aini.hpp"
+
+
 
 struct KerrBlackHole
 {
@@ -23,16 +29,65 @@ struct KerrBlackHole
         ImGui::DragInt("pos_x", &x);
         ImGui::DragInt("pos_y", &y);
 
-        ImGui::InputDouble("mass", &M);
-        ImGui::InputDouble("angular momentum", &J);
-        ImGui::InputDouble("radial coordinate", &r);
+        ImGui::DragDouble("mass", &M);
+        ImGui::DragDouble("angular momentum", &J);
+        ImGui::DragDouble("radial coordinate", &r);
+
+
+        ImGui::Text("a : %f", kerrParameter());
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+        		ImGui::TextUnformatted("a is kerrParameter: a = mass/angular momentum");
+            ImGui::EndTooltip();
+        }
+
+        ImGui::Text("spin : %f", getSpin());
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted("spin is the ");
+            ImGui::EndTooltip();
+        }
+    }
+
+    void serialize(aini::Writer& w)
+    {
+        w.set_int("pos_x", x, "KerrBlackHole");
+        w.set_int("pos_y", y, "KerrBlackHole");
+
+        w.set_float("mass", M, "KerrBlackHole");
+        w.set_float("angular_m", J, "KerrBlackHole");
+        w.set_float("radial", r, "KerrBlackHole");
+    }
+
+    void deserialize(aini::Reader& reader)
+    {
+        x = reader.get_int("pos_x", "KerrBlackHole");
+        y = reader.get_int("pos_y", "KerrBlackHole");
+
+        M = reader.get_float("mass", "KerrBlackHole");
+        J = reader.get_float("angular_m", "KerrBlackHole");
+        r = reader.get_float("radial", "KerrBlackHole");
     }
 
     double kerrParameter() const
     {
         return J / M;
     }
+
+    double getSpin() const
+    {
+        return kerrParameter() / M;
+    }
 };
+
+static std::string readText(std::ifstream const& settingsFile)
+{
+    std::ostringstream sstream;
+    sstream << settingsFile.rdbuf();
+    return sstream.str();
+}
 
 //https://en.wikipedia.org/w/index.php?title=Midpoint_circle_algorithm&oldid=889172082#C_example
 void draw_circle(SDL_Renderer* renderer, int x0, int y0, int radius)
@@ -111,6 +166,14 @@ int main(int, char**)
     int grid_size = 35;
 
     KerrBlackHole blackHole;
+    {
+        std::ifstream saveFile("save.ini");
+        if (saveFile.is_open())
+        {
+            aini::Reader reader(readText(saveFile));
+            blackHole.deserialize(reader);
+        }
+    }
 
     // Main loop
     bool done = false;
@@ -148,6 +211,15 @@ int main(int, char**)
             ImGui::DragInt("scale", &scale, 10, 10, 10000);
 
         	blackHole.showEditor();
+
+            if (ImGui::Button("save"))
+            {
+                aini::Writer writer;
+                blackHole.serialize(writer);
+                std::ofstream saveFile("save.ini");
+                saveFile << writer.write();
+                saveFile.flush();
+            }
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
@@ -196,6 +268,8 @@ int main(int, char**)
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
         SDL_RenderPresent(renderer);
     }
+
+
 
     // Cleanup
     ImGui_ImplSDLRenderer_Shutdown();

@@ -2467,6 +2467,14 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     return DragScalar(label, ImGuiDataType_Float, v, v_speed, &v_min, &v_max, format, flags);
 }
 
+bool ImGui::DragDouble(const char* label, double* v, float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
+{
+    float tmp = (float)*v;
+	bool r = DragScalar(label, ImGuiDataType_Float, &tmp, v_speed, &v_min, &v_max, format, flags);
+    *v = tmp;
+    return r;
+}
+
 bool ImGui::DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_Float, v, 2, v_speed, &v_min, &v_max, format, flags);
