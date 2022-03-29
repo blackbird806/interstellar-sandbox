@@ -35,5 +35,8 @@ x64
 *.app
 Interstellar/Interstellar/Interstellar.vcxproj.user
 
+## Dear ImGui artifacts
+imgui.ini
+
 # JetBrains
 _ReSharper.*
