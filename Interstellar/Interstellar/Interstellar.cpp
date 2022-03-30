@@ -4,127 +4,21 @@
 #include <imgui/imgui_impl_sdl.h>
 #include <imgui/imgui_impl_sdlrenderer.h>
 #include <stdio.h>
-#include <vector>
 #include <fstream>
 #include <sstream>
+#include <Eigen/Dense>
 #define AINI_IMPLEMENTATION
 #include "aini.hpp"
+#include "KerrBlackHole.hpp"
+#include "physicalConstants.hpp"
 
-
-
-struct KerrBlackHole
-{
-    int x = 0, y = 0;
-
-    double M = 10.0f;       // mass
-    double J = 1.0f;        // angular momentum
-    double r = 0.0f;        // radial coordinate
-    double theta = 0.0f;    // colatitude
-    double phi = 0.0f;      // longitude
-
-    void showEditor()
-    {
-        ImGui::TextUnformatted("KerrBlackHole");
-
-        ImGui::DragInt("pos_x", &x);
-        ImGui::DragInt("pos_y", &y);
-
-        ImGui::DragDouble("mass", &M);
-        ImGui::DragDouble("angular momentum", &J);
-        ImGui::DragDouble("radial coordinate", &r);
-
-
-        ImGui::Text("a : %f", kerrParameter());
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-        		ImGui::TextUnformatted("a is kerrParameter: a = mass/angular momentum");
-            ImGui::EndTooltip();
-        }
-
-        ImGui::Text("spin : %f", getSpin());
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::TextUnformatted("spin is the ");
-            ImGui::EndTooltip();
-        }
-    }
-
-    void serialize(aini::Writer& w)
-    {
-        w.set_int("pos_x", x, "KerrBlackHole");
-        w.set_int("pos_y", y, "KerrBlackHole");
-
-        w.set_float("mass", M, "KerrBlackHole");
-        w.set_float("angular_m", J, "KerrBlackHole");
-        w.set_float("radial", r, "KerrBlackHole");
-    }
-
-    void deserialize(aini::Reader& reader)
-    {
-        x = reader.get_int("pos_x", "KerrBlackHole");
-        y = reader.get_int("pos_y", "KerrBlackHole");
-
-        M = reader.get_float("mass", "KerrBlackHole");
-        J = reader.get_float("angular_m", "KerrBlackHole");
-        r = reader.get_float("radial", "KerrBlackHole");
-    }
-
-    double kerrParameter() const
-    {
-        return J / M;
-    }
-
-    double getSpin() const
-    {
-        return kerrParameter() / M;
-    }
-};
+using vec = Eigen::Vector2<double>;
 
 static std::string readText(std::ifstream const& settingsFile)
 {
     std::ostringstream sstream;
     sstream << settingsFile.rdbuf();
     return sstream.str();
-}
-
-//https://en.wikipedia.org/w/index.php?title=Midpoint_circle_algorithm&oldid=889172082#C_example
-void draw_circle(SDL_Renderer* renderer, int x0, int y0, int radius)
-{
-    int x = radius - 1;
-    int y = 0;
-    int dx = 1;
-    int dy = 1;
-    int err = dx - (radius << 1);
-    std::vector<SDL_Point> points;
-    points.reserve(4096);
-    while (x >= y)
-    {
-        points.push_back({ x0 + x, y0 + y });
-        points.push_back({x0 + y, y0 + x});
-        points.push_back({x0 - y, y0 + x});
-        points.push_back({x0 - x, y0 + y});
-        points.push_back({x0 - x, y0 - y});
-        points.push_back({x0 - y, y0 - x});
-        points.push_back({x0 + y, y0 - x});
-        points.push_back({ x0 + x, y0 - y });
-
-        if (err <= 0)
-        {
-            y++;
-            err += dy;
-            dy += 2;
-        }
-
-        if (err > 0)
-        {
-            x--;
-            dx += 2;
-            err += dx - (radius << 1);
-        }
-    }
-    SDL_RenderDrawPoints(renderer, points.data(), points.size());
 }
 
 int main(int, char**)
@@ -143,8 +37,8 @@ int main(int, char**)
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
     if (renderer == nullptr)
     {
-        SDL_Log("Error creating SDL_Renderer!");
-        return false;
+        printf("Error: %s\n", SDL_GetError());
+        return -1;
     }
 
     // Setup Dear ImGui context
@@ -177,6 +71,8 @@ int main(int, char**)
 
     // Main loop
     bool done = false;
+    int steps = 100;
+    int scale = 100;
     while (!done)
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -198,17 +94,16 @@ int main(int, char**)
         ImGui_ImplSDLRenderer_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-        static int steps = 100;
-        static int scale = 100;
+
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
             ImGui::Begin("Settings");
             ImGui::ColorEdit3("clear color", (float*)&clear_color); 
             ImGui::ColorEdit3("grid color", (float*)&grid_color);   
             ImGui::SliderInt("grid size", &grid_size, 10, 100);
-           
+
             ImGui::DragInt("steps", &steps, 10, 100, 1000);
-            ImGui::DragInt("scale", &scale, 10, 10, 10000);
+            ImGui::DragInt("scale", &scale, 10, -10000, 10000);
 
         	blackHole.showEditor();
 
@@ -234,6 +129,7 @@ int main(int, char**)
         int width, height;
         SDL_GetWindowSize(window, &width, &height);
 
+        /*
         for (int t = 0; t < steps; t++)
         {
             double const th = M_PI*t / steps;
@@ -252,18 +148,57 @@ int main(int, char**)
                 SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
                 SDL_RenderDrawPoint(renderer, blackHole.x + x * scale, blackHole.y + z * scale);
             }
+        }
+        */
 
+        // newton approximation
+        // see: https://fr.wikipedia.org/wiki/Tests_exp%C3%A9rimentaux_de_la_relativit%C3%A9_g%C3%A9n%C3%A9rale
+        // https://fr.wikipedia.org/wiki/Loi_universelle_de_la_gravitation
+        auto tstepw = (double)width / steps;
+        for (int y = 0; y < height; y += grid_size)
+        {
+	        for (int t = 0; t < steps; t++) 
+	        {
+                // x, y is initial pos
+                auto const x = t * tstepw;
+
+                vec const d = { blackHole.x - x, blackHole.y - y };
+                auto const F = (G * blackHole.M) / d.squaredNorm() * (double)scale;
+                vec const v = d.normalized();
+                vec n = v * F + vec{ x, y };
+
+                // do not show point inside black hole
+                if (vec(n[0] - x, n[1] - y).norm() > d.norm())
+                    continue;
+
+                SDL_RenderDrawPoint(renderer, n[0], n[1]);
+	        }
         }
 
-        //for (int x = 0; x < width; x += grid_size)
-        //{
-        //    SDL_RenderDrawLine(renderer, x, 0, x, height);
-        //}
+    	auto tsteph = (double)height / steps;
+        for (int x = 0; x < width; x += grid_size)
+        {
+            for (int t = 0; t < steps; t++)
+            {
+                auto const y = t * tsteph;
 
-        //for (int y = 0; y < height; y += grid_size)
-        //{
-        //    SDL_RenderDrawLine(renderer, 0, y, width, y);
-        //}
+                vec const d = { blackHole.x - x, blackHole.y - y };
+                auto const F = (G * blackHole.M) / d.squaredNorm() * (double)scale;
+                vec const v = d.normalized();
+                vec n = v * F + vec{ x, y };
+
+                // do not show point inside black hole
+                if (vec(n[0] - x, n[1] - y).norm() > d.norm())
+                    continue;
+
+                SDL_RenderDrawPoint(renderer, n[0], n[1]);
+            }
+        }
+
+        // draw black hole center
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    	SDL_Rect brect{ blackHole.x, blackHole.y, 4, 4 };
+        SDL_RenderFillRect(renderer, &brect);
 
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
         SDL_RenderPresent(renderer);
