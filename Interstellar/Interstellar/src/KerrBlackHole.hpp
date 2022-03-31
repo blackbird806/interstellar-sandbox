@@ -2,15 +2,13 @@
 #include <imgui/imgui.h>
 #include <aini.hpp>
 
-struct KerrBlackHole
+//https://fr.wikipedia.org/wiki/M%C3%A9trique_de_Schwarzschild#Coordonn%C3%A9es_de_Schwarzschild
+struct SchwarzschildBlackHole
 {
     int x = 0, y = 0;
 
-    double M = 10.0f;       // mass
-    double J = 1.0f;        // angular momentum
-    double r = 0.0f;        // radial coordinate
-    double theta = 0.0f;    // colatitude
-    double phi = 0.0f;      // longitude
+    double M = 10.0f; // mass
+    double J = 1.0f;  // angular momentum
 
     void showEditor()
     {
@@ -21,7 +19,6 @@ struct KerrBlackHole
 
         ImGui::DragDouble("mass", &M);
         ImGui::DragDouble("angular momentum", &J);
-        ImGui::DragDouble("radial coordinate", &r);
 
 
         ImGui::Text("a : %f", kerrParameter());
@@ -43,22 +40,20 @@ struct KerrBlackHole
 
     void serialize(aini::Writer& w)
     {
-        w.set_int("pos_x", x, "KerrBlackHole");
-        w.set_int("pos_y", y, "KerrBlackHole");
+        w.set_int("pos_x", x, "SchwarzschildBlackHole");
+        w.set_int("pos_y", y, "SchwarzschildBlackHole");
 
-        w.set_float("mass", M, "KerrBlackHole");
-        w.set_float("angular_m", J, "KerrBlackHole");
-        w.set_float("radial", r, "KerrBlackHole");
+        w.set_float("mass", M, "SchwarzschildBlackHole");
+        w.set_float("angular_m", J, "SchwarzschildBlackHole");
     }
 
     void deserialize(aini::Reader& reader)
     {
-        x = reader.get_int("pos_x", "KerrBlackHole");
-        y = reader.get_int("pos_y", "KerrBlackHole");
+        x = reader.get_int("pos_x", "SchwarzschildBlackHole");
+        y = reader.get_int("pos_y", "SchwarzschildBlackHole");
 
-        M = reader.get_float("mass", "KerrBlackHole");
-        J = reader.get_float("angular_m", "KerrBlackHole");
-        r = reader.get_float("radial", "KerrBlackHole");
+        M = reader.get_float("mass", "SchwarzschildBlackHole");
+        J = reader.get_float("angular_m", "SchwarzschildBlackHole");
     }
 
     double kerrParameter() const

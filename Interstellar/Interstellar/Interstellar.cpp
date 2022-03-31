@@ -4,6 +4,7 @@
 #include <imgui/imgui_impl_sdl.h>
 #include <imgui/imgui_impl_sdlrenderer.h>
 #include <stdio.h>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <Eigen/Dense>
@@ -59,7 +60,7 @@ int main(int, char**)
     ImVec4 grid_color = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
     int grid_size = 35;
 
-    KerrBlackHole blackHole;
+    SchwarzschildBlackHole blackHole;
     {
         std::ifstream saveFile("save.ini");
         if (saveFile.is_open())
@@ -163,7 +164,7 @@ int main(int, char**)
                 auto const x = t * tstepw;
 
                 vec const d = { blackHole.x - x, blackHole.y - y };
-                auto const F = (G * blackHole.M) / d.squaredNorm() * (double)scale;
+                auto const F = (G.value() * blackHole.M) / d.squaredNorm() * (double)scale;
                 vec const v = d.normalized();
                 vec n = v * F + vec{ x, y };
 
@@ -183,7 +184,7 @@ int main(int, char**)
                 auto const y = t * tsteph;
 
                 vec const d = { blackHole.x - x, blackHole.y - y };
-                auto const F = (G * blackHole.M) / d.squaredNorm() * (double)scale;
+                auto const F = (G.value() * blackHole.M) / d.squaredNorm() * (double)scale;
                 vec const v = d.normalized();
                 vec n = v * F + vec{ x, y };
 
@@ -203,8 +204,6 @@ int main(int, char**)
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
         SDL_RenderPresent(renderer);
     }
-
-
 
     // Cleanup
     ImGui_ImplSDLRenderer_Shutdown();
