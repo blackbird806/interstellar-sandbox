@@ -4,7 +4,6 @@
 #include <imgui/imgui_impl_sdl.h>
 #include <imgui/imgui_impl_sdlrenderer.h>
 #include <stdio.h>
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <Eigen/Dense>
@@ -12,6 +11,7 @@
 #include "aini.hpp"
 #include "KerrBlackHole.hpp"
 #include "physicalConstants.hpp"
+#include "drawUtility.hpp"
 
 using vec = Eigen::Vector2<double>;
 
@@ -58,7 +58,14 @@ int main(int, char**)
     // Our state
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
     ImVec4 grid_color = ImVec4(0.0f, 1.0f, 0.0f, 1.00f);
+
+    vec initialPos;
+    double initialVelocity = units::constants::c.value();
+    float angle;
+
     int grid_size = 35;
+    // size of pixel in meters
+    double pixel_scale = units::constants::c.value();
 
     SchwarzschildBlackHole blackHole;
     {
@@ -72,8 +79,7 @@ int main(int, char**)
 
     // Main loop
     bool done = false;
-    int steps = 100;
-    int scale = 100;
+    int steps = 200;
     while (!done)
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -103,8 +109,13 @@ int main(int, char**)
             ImGui::ColorEdit3("grid color", (float*)&grid_color);   
             ImGui::SliderInt("grid size", &grid_size, 10, 100);
 
-            ImGui::DragInt("steps", &steps, 10, 100, 1000);
-            ImGui::DragInt("scale", &scale, 10, -10000, 10000);
+            ImGui::DragInt("steps", &steps, 100, 1, 0);
+            ImGui::DragDouble("pixel scale", &pixel_scale, 100, 0, 0, "%.10e");
+
+            ImGui::DragDouble("initial velocity", &initialVelocity, 100, 0, 0, "%.10e");
+            ImGui::DragDouble("initial pos x", &initialPos[0], 10e8, 0, 0, "%.10e");
+            ImGui::DragDouble("initial pos y", &initialPos[1], 10e8, 0, 0, "%.10e");
+            ImGui::DragFloat("angle", &angle, 1, 0, 360);
 
         	blackHole.showEditor();
 
@@ -155,51 +166,64 @@ int main(int, char**)
         // newton approximation
         // see: https://fr.wikipedia.org/wiki/Tests_exp%C3%A9rimentaux_de_la_relativit%C3%A9_g%C3%A9n%C3%A9rale
         // https://fr.wikipedia.org/wiki/Loi_universelle_de_la_gravitation
-        auto tstepw = (double)width / steps;
-        for (int y = 0; y < height; y += grid_size)
+
+        vec initialDirection = { cos(angle * toRad), sin(angle * toRad) };
+        auto pos = initialPos;
+
+    	for (int i = 0; i < steps; i++)
         {
-	        for (int t = 0; t < steps; t++) 
-	        {
-                // x, y is initial pos
-                auto const x = t * tstepw;
-
-                vec const d = { blackHole.x - x, blackHole.y - y };
-                auto const F = (G.value() * blackHole.M) / d.squaredNorm() * (double)scale;
-                vec const v = d.normalized();
-                vec n = v * F + vec{ x, y };
-
-                // do not show point inside black hole
-                if (vec(n[0] - x, n[1] - y).norm() > d.norm())
-                    continue;
-
-                SDL_RenderDrawPoint(renderer, n[0], n[1]);
-	        }
+            vec const d = { blackHole.x - pos[0], blackHole.y - pos[1]};
+            auto const F = ((units::constants::G.value()) * blackHole.M) / d.squaredNorm();
         }
 
-    	auto tsteph = (double)height / steps;
-        for (int x = 0; x < width; x += grid_size)
-        {
-            for (int t = 0; t < steps; t++)
-            {
-                auto const y = t * tsteph;
+     //   auto tstepw = (double)width / steps;
+     //   for (int y = 0; y < height; y += grid_size)
+     //   {
+	    //    for (int t = 0; t < steps; t++) 
+	    //    {
+     //           // x, y is initial pos
+     //           auto const x = t * tstepw;
 
-                vec const d = { blackHole.x - x, blackHole.y - y };
-                auto const F = (G.value() * blackHole.M) / d.squaredNorm() * (double)scale;
-                vec const v = d.normalized();
-                vec n = v * F + vec{ x, y };
+     //           vec const d = { blackHole.x -x, blackHole.y - y};
+     //           auto const F = ((units::constants::G.value() / pixel_scale) * blackHole.M) / d.squaredNorm();
+     //           vec const v = d.normalized();
+     //           vec const n = v * F + vec{x, y};
 
-                // do not show point inside black hole
-                if (vec(n[0] - x, n[1] - y).norm() > d.norm())
-                    continue;
+     //           // do not show point inside black hole
+     //           if (vec(n[0] - x, n[1] - y).norm() > d.norm() ||
+					//vec(blackHole.x - n[0], blackHole.y - n[1]).norm() < (blackHole.SchwarzschildRadius() / pixel_scale))
+     //               continue;
+     //           
+     //           SDL_RenderDrawPoint(renderer, n[0], n[1]);
+	    //    }
+     //   }
 
-                SDL_RenderDrawPoint(renderer, n[0], n[1]);
-            }
-        }
+    	//auto tsteph = (double)height / steps;
+     //   for (int x = 0; x < width; x += grid_size)
+     //   {
+     //       for (int t = 0; t < steps; t++)
+     //       {
+     //           auto const y = t * tsteph;
+
+     //           vec const d = { blackHole.x - x, blackHole.y - y };
+     //           auto const F = ((units::constants::G.value() / pixel_scale) * blackHole.M) / d.squaredNorm();
+     //           vec const v = d.normalized();
+     //           vec n = v * F + vec{ x, y };
+
+     //           // do not show point inside black hole
+     //           if (vec(n[0] - x, n[1] - y).norm() > d.norm() ||
+     //               vec(blackHole.x - n[0], blackHole.y - n[1]).norm() < (blackHole.SchwarzschildRadius() / pixel_scale))
+     //               continue;
+
+     //           SDL_RenderDrawPoint(renderer, n[0], n[1]);
+     //       }
+     //   }
 
         // draw black hole center
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-    	SDL_Rect brect{ blackHole.x, blackHole.y, 4, 4 };
+    	SDL_Rect brect{ (int)(blackHole.x / pixel_scale), (int)(blackHole.y / pixel_scale), 4, 4 };
         SDL_RenderFillRect(renderer, &brect);
+        draw_circle(renderer, blackHole.x / pixel_scale, blackHole.y / pixel_scale, blackHole.SchwarzschildRadius() / pixel_scale);
 
         ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
         SDL_RenderPresent(renderer);

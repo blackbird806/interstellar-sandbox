@@ -9,18 +9,17 @@ void draw_circle(SDL_Renderer* renderer, int x0, int y0, int radius)
     int dx = 1;
     int dy = 1;
     int err = dx - (radius << 1);
-    std::vector<SDL_Point> points;
-    points.reserve(4096);
+    int counter = 0;
     while (x >= y)
     {
-        points.push_back({ x0 + x, y0 + y });
-        points.push_back({ x0 + y, y0 + x });
-        points.push_back({ x0 - y, y0 + x });
-        points.push_back({ x0 - x, y0 + y });
-        points.push_back({ x0 - x, y0 - y });
-        points.push_back({ x0 - y, y0 - x });
-        points.push_back({ x0 + y, y0 - x });
-        points.push_back({ x0 + x, y0 - y });
+        SDL_RenderDrawPoint(renderer, x0 + x, y0 + y);
+        SDL_RenderDrawPoint(renderer, x0 + y, y0 + x);
+        SDL_RenderDrawPoint(renderer, x0 - y, y0 + x);
+        SDL_RenderDrawPoint(renderer, x0 - x, y0 + y);
+        SDL_RenderDrawPoint(renderer, x0 - x, y0 - y);
+        SDL_RenderDrawPoint(renderer, x0 - y, y0 - x);
+        SDL_RenderDrawPoint(renderer, x0 + y, y0 - x);
+        SDL_RenderDrawPoint(renderer, x0 + x, y0 - y);
 
         if (err <= 0)
         {
@@ -35,6 +34,7 @@ void draw_circle(SDL_Renderer* renderer, int x0, int y0, int radius)
             dx += 2;
             err += dx - (radius << 1);
         }
+        if (counter++ > 500)
+            break;
     }
-    SDL_RenderDrawPoints(renderer, points.data(), points.size());
 }

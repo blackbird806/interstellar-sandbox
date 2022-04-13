@@ -18,4 +18,4 @@ constexpr units::mass::kilogram_t operator""_SM(long double d)
 	return units::mass::kilogram_t(d * SM);
 }
 
-constexpr gravity_t G(6.67408e-11); // gravitational constant
+double constexpr toRad = 0.0174533;
