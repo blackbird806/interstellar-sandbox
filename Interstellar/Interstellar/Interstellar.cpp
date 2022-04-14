@@ -66,6 +66,8 @@ int main(int, char**)
 	double pixel_scale = 1;
 	double constexpr G = 1;
 	double constexpr C = 1;
+	float time = 0.0;
+	float animation_speed = 1.0f;
 	double M = 1000;
 	SchwarzschildBlackHole blackHole;
 	{
@@ -113,6 +115,18 @@ int main(int, char**)
 			ImGui::DragInt("n rays", &n_rays, 1, 1, 0);
 			ImGui::DragDouble("pixel scale", &pixel_scale);
 			ImGui::DragDouble("M", &M);
+			ImGui::SliderFloat("Time", &time, 0, 1.0f);
+			ImGui::DragFloat("animation speed", &animation_speed);
+			static bool animate = false;
+			ImGui::Checkbox("Animate", &animate);
+			if (animate)
+			{
+				time += animation_speed * ImGui::GetIO().DeltaTime;
+				if (time > 1.0f)
+					time = 0.0f;
+				if (time < 0.0f)
+					time = 1.0f;
+			}
 
 			ImGui::DragDouble("initial pos x", &initialPos[0]);
 			ImGui::DragDouble("initial pos y", &initialPos[1]);
@@ -132,9 +146,7 @@ int main(int, char**)
 			ImGui::End();
 		}
 
-		// Rendering
-		ImGui::Render();
-		SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
+
 		SDL_RenderClear(renderer);
 
 		SDL_SetRenderDrawColor(renderer, (Uint8)(grid_color.x * 255), (Uint8)(grid_color.y * 255), (Uint8)(grid_color.z * 255), (Uint8)(grid_color.w * 255));
@@ -145,16 +157,17 @@ int main(int, char**)
 		// see: https://fr.wikipedia.org/wiki/Tests_exp%C3%A9rimentaux_de_la_relativit%C3%A9_g%C3%A9n%C3%A9rale
 		// https://fr.wikipedia.org/wiki/Loi_universelle_de_la_gravitation
 
-		auto draw_ray = [&](vec pos, vec dir)
+		auto draw_ray = [&](vec pos, double angle)
 		{
-			for (int i = 0; i < steps; i++)
+			vec dir{ cos(angle), sin(angle) };
+			for (int i = 0; i < (int)(steps * time); i++)
 			{
 				vec const d = blackHole.pos - pos;
 				auto const F = (G * M) / (d.squaredNorm());
 				auto const gravity = d.normalized() * F;
-				pos += gravity + dir * C;
-				auto const phi = (2.0 * G * M) / (C * C * d.norm());
-				dir += vec{ cos(phi), sin(phi) };
+				dir += gravity;
+				pos += dir * C;
+
 				SDL_RenderDrawPoint(renderer, (int)(pos[0] / pixel_scale), (int)(pos[1] / pixel_scale));
 			}
 		};
@@ -163,7 +176,7 @@ int main(int, char**)
 		double angle = 0;
 		for (int n = 0; n < n_rays; n++)
 		{
-			draw_ray(initialPos, vec{cos(angle), sin(angle)});
+			draw_ray(initialPos, angle);
 			angle += angleStep;
 		}
 
@@ -172,7 +185,9 @@ int main(int, char**)
 		SDL_Rect brect{ (int)(blackHole.pos[0] / pixel_scale), (int)(blackHole.pos[1] / pixel_scale), 4, 4};
 		SDL_RenderFillRect(renderer, &brect);
 		//draw_circle(renderer, blackHole.pos[0] / pixel_scale, blackHole.pos[1] / pixel_scale, blackHole.SchwarzschildRadius() / pixel_scale);
-
+				
+		ImGui::Render();
+		SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
 		ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
 		SDL_RenderPresent(renderer);
 	}
